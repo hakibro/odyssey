@@ -7,6 +7,7 @@ import "../services"
 Item {
     id: root
     required property string itemId
+    property var monitor
     property bool powerHovered: false
     signal powerRequested()
     signal captureRequested()
@@ -19,6 +20,7 @@ Item {
         sourceComponent: root.itemId === "Weather" ? weatherComponent
             : root.itemId === "Dnd" ? dndComponent
             : root.itemId === "Clock" ? clockComponent
+            : root.itemId === "Workspaces" ? workspacesComponent
             : root.itemId === "KeepAwake" ? keepAwakeComponent
             : root.itemId === "PowerProfile" ? powerComponent : null
     }
@@ -72,6 +74,32 @@ Item {
             font.family: Config.appearance.monoFontFamily
             font.pixelSize: Math.round(11 * Config.island.restTextScale)
             font.weight: Font.Bold
+        }
+    }
+
+    Component {
+        id: workspacesComponent
+        Item {
+            readonly property int workspaceCount: Config.island.restWorkspaceCount
+            implicitWidth: dots.implicitWidth
+            implicitHeight: 20
+            RowLayout {
+                id: dots
+                anchors.centerIn: parent
+                spacing: Math.round(Theme.space1 * Config.island.restIconScale)
+                Repeater {
+                    model: workspaceCount
+                    StatusDot {
+                        active: root.monitor?.activeWorkspace?.id === index + 1
+                        occupied: HyprlandService.occupiedWorkspaces.some(
+                            workspace => workspace.id === index + 1)
+                        urgent: HyprlandService.urgentWorkspaces.some(
+                            workspace => workspace.id === index + 1)
+                        Layout.preferredWidth: implicitWidth
+                        Layout.preferredHeight: implicitHeight
+                    }
+                }
+            }
         }
     }
 

@@ -36,7 +36,7 @@ QtObject {
         "auto", "kitty", "foot", "alacritty", "ghostty"
     ]
     readonly property var validRestIslandItems: [
-        "Weather", "Dnd", "KeepAwake", "PowerProfile"
+        "Weather", "Dnd", "KeepAwake", "PowerProfile", "Workspaces"
     ]
     readonly property var validHoverIslandItems: [
         "Workspaces", "Clock", "Media", "Audio", "Network", "Dnd",

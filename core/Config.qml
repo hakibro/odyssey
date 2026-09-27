@@ -125,6 +125,10 @@ QtObject {
             restItemOrder.indexOf("KeepAwake") >= 0
         readonly property bool restShowPowerProfile:
             restItemOrder.indexOf("PowerProfile") >= 0
+        readonly property bool restShowWorkspaces:
+            restItemOrder.indexOf("Workspaces") >= 0
+        readonly property int restWorkspaceCount: Math.max(1, Math.min(10,
+            SettingsStore.numberValue("island", "restWorkspaceCount", 5, 1, 10)))
         readonly property int restMinimumWidth: 150
         readonly property bool hoverScaleSynced: SettingsStore.boolValue(
             "island", "hoverScaleSynced", true)

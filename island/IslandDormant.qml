@@ -8,6 +8,7 @@ Item {
     signal powerRequested()
     signal captureRequested()
     property bool powerHovered: false
+    property var monitor
     readonly property var displayOrder: CaptureService.recording
             && Config.island.restItemOrder.indexOf("PowerProfile") < 0
         ? Config.island.restItemOrder.concat(["PowerProfile"])
@@ -45,6 +46,7 @@ Item {
                 delegate: IslandRestItem {
                     required property string modelData
                     itemId: modelData
+                    monitor: root.monitor
                     Layout.preferredWidth: implicitWidth
                     Layout.preferredHeight: implicitHeight
                     onPowerHoveredChanged: if (itemId === "PowerProfile")
@@ -59,6 +61,7 @@ Item {
             id: restClock
             anchors.centerIn: parent
             itemId: "Clock"
+            monitor: root.monitor
         }
 
         RowLayout {
@@ -73,6 +76,7 @@ Item {
                 delegate: IslandRestItem {
                     required property string modelData
                     itemId: modelData
+                    monitor: root.monitor
                     Layout.preferredWidth: implicitWidth
                     Layout.preferredHeight: implicitHeight
                     onPowerHoveredChanged: if (itemId === "PowerProfile")

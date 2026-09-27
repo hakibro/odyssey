@@ -167,6 +167,7 @@ PanelWindow {
                 IslandDormant {
                     id: dormantContent
                     anchors.fill: parent
+                    monitor: window.monitor
                     onPowerRequested: islandController.openPage("control-center")
                     onCaptureRequested: islandController.openPage("capture")
                 }
@@ -405,6 +406,7 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             width: liveEditPreview.bodyWidth
             visible: window.liveEditMode === "rest"
+            monitor: window.monitor
         }
         IslandHover {
             anchors.top: parent.top
