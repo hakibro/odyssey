@@ -3,3 +3,5 @@
 # directory and release artifacts are not.
 /odyssey-dev-state/
 *.ody
+__pycache__/
+*.pyc
