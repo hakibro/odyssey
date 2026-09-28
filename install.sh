@@ -416,7 +416,7 @@ else
 CHANGED=0
 BACKUP=none'
 fi
-"$release_root/scripts/shortcutctl.sh" apply "$config_root/hypr/hyprland.lua" true true true true true true true true true true >/dev/null
+"$release_root/scripts/shortcutctl.sh" apply "$config_root/hypr/hyprland.lua" true true true true true true true true true true true true >/dev/null
 systemctl --user daemon-reload
 if [[ $configuration_mode == managed ]]; then
     systemctl --user enable odyssey.service hypridle.service >/dev/null
@@ -432,8 +432,9 @@ declare -a labels=() results=() details=()
 check() { labels+=("$1"); check_detail=; shift; if "$@"; then results+=(pass); details+=(""); else results+=(fail); details+=("${check_detail:-failed}"); fi; }
 has_command() { command -v "$1" >/dev/null 2>&1; }
 odyssey_command_ok() {
-    local output expected="${XDG_BIN_HOME:-$HOME/.local/bin}/odyssey"
-    output=$("$root_dir/scripts/verify-launcher-path.sh" "$expected" 2>&1) \
+    local output expected="${XDG_BIN_HOME:-$HOME/.local/bin}/odyssey" shell=bash
+    [[ $(basename -- "${default_shell:-unknown}") != fish ]] || shell=fish
+    output=$("$root_dir/scripts/verify-launcher-path.sh" "$expected" "$shell" 2>&1) \
         || { check_detail=$output; return 1; }
 }
 valid_release() {
@@ -473,8 +474,8 @@ valid_hyprland_files() {
     fi
 }
 valid_shortcuts() {
-    local expected=14 launcher command
-    [[ $configuration_mode == managed ]] && expected=10
+    local expected=16 launcher command
+    [[ $configuration_mode == managed ]] && expected=12
     launcher="${XDG_BIN_HOME:-$HOME/.local/bin}/odyssey"
     [[ $launcher == /* && $launcher != *$'\n'* ]] || return 1
     command=$(jq -rn --arg path "$launcher" '$path|@sh')' ipc '
