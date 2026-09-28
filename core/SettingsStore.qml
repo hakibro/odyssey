@@ -194,7 +194,7 @@ QtObject {
     function setIslandMetric(metric: string, nextValue: real): bool {
         const bounds = ({
             topMargin: [0, 16], reservedSpace: [26, 52],
-            dormantWidth: [150, 320], hoverWidth: [470, 760],
+            dormantWidth: [150, 520], hoverWidth: [470, 760],
             expandedWidth: [620, 900], heightIncrease: [0, 32],
             restItemSpacing: [2, 18], hoverItemSpacing: [2, 20],
             hoverEdgePadding: [8, 48], autoHideDelay: [500, 10000],

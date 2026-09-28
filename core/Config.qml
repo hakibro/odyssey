@@ -104,7 +104,7 @@ QtObject {
         readonly property int reservedSpace: SettingsStore.numberValue(
             "island", "reservedSpace", 30, 26, 52)
         readonly property int dormantWidth: SettingsStore.numberValue(
-            "island", "dormantWidth", 214, 150, 320)
+            "island", "dormantWidth", 214, 150, 520)
         readonly property int heightIncrease: SettingsStore.numberValue(
             "island", "heightIncrease", 0, 0, 32)
         readonly property int dormantHeight: 28

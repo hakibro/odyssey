@@ -1734,7 +1734,7 @@ Item {
                                         Layout.fillWidth: true
                                         label: "Resting width"
                                         value: Config.island.dormantWidth
-                                        from: 150; to: 320
+                                        from: 150; to: 520
                                         onAdjusted: value => AppearanceService
                                             .setIslandMetric("dormantWidth", value)
                                     }
