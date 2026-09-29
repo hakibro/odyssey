@@ -18,10 +18,12 @@ Item {
             order = order.filter(itemId => itemId !== "Battery")
         return order
     }
-    readonly property var leftDisplayOrder: displayOrder.slice(0,
-        Math.ceil(displayOrder.length / 2))
-    readonly property var rightDisplayOrder: displayOrder.slice(
-        Math.ceil(displayOrder.length / 2))
+    readonly property var leftDisplayOrder: displayOrder.filter(itemId =>
+        SettingsStore.restItemSide(Config.island.restItemSides,
+            Config.island.restItemOrder, itemId) === "left")
+    readonly property var rightDisplayOrder: displayOrder.filter(itemId =>
+        SettingsStore.restItemSide(Config.island.restItemSides,
+            Config.island.restItemOrder, itemId) === "right")
     readonly property real horizontalPadding: Theme.space2
     readonly property real sideWidth: Math.max(
         leftItems.implicitWidth, rightItems.implicitWidth)

@@ -1800,8 +1800,9 @@ Item {
                                 detail: root.pillPreviewMode === "rest"
                                     ? "Arrange the surrounding resting items"
                                     : "Drag items into slots, between slots, or into remove"
-                                contentHeight: root.pillPreviewMode === "rest" ? 185 : 224
+                                contentHeight: itemOrderEditor.implicitHeight
                                 IslandOrderEditor {
+                                    id: itemOrderEditor
                                     anchors.fill: parent
                                     context: root.pillPreviewMode
                                 }

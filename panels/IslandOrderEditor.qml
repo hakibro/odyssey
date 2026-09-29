@@ -25,7 +25,16 @@ Item {
     ]
     readonly property var order: context === "rest"
         ? Config.island.restItemOrder : Config.island.hoverItemOrder
-    implicitHeight: context === "rest" ? 177 : 216
+    readonly property bool splitSides: context === "rest"
+    readonly property var leftOrder: Config.island.restLeftItemOrder
+    readonly property var rightOrder: Config.island.restRightItemOrder
+    // Number of slots drawn per side. Follows the current fill level so the
+    // user always has at least one empty slot to drop a new item into.
+    readonly property int leftSlots: splitSides
+        ? Math.max(leftOrder.length + 1, 2) : definitions.length
+    readonly property int rightSlots: splitSides
+        ? Math.max(rightOrder.length + 1, 2) : 0
+    implicitHeight: context === "rest" ? 232 : 216
 
     function definition(itemId): var {
         for (const candidate of definitions) {
@@ -35,10 +44,29 @@ Item {
         return { id: itemId, icon: "•", label: itemId }
     }
 
+    // ---- Hover island: a single ordered strip of slots -------------------
+
     function place(itemId, targetIndex): void {
         const next = order.filter(candidate => candidate !== itemId)
         next.splice(Math.max(0, Math.min(targetIndex, next.length)), 0, itemId)
         SettingsStore.setIslandItemOrder(context, next)
+    }
+
+    // ---- Resting island: two independent slopes of items -----------------
+
+    // Assign an item to a side, inserting it at `targetIndex` inside that
+    // column while keeping every other item's side and relative order.
+    function placeSide(itemId, side, targetIndex): void {
+        if (side !== "left" && side !== "right")
+            return
+        const column = (side === "left" ? leftOrder : rightOrder)
+            .filter(candidate => candidate !== itemId)
+        column.splice(Math.max(0, Math.min(targetIndex, column.length)), 0, itemId)
+        const other = (side === "left" ? rightOrder : leftOrder)
+            .filter(candidate => candidate !== itemId)
+        SettingsStore.setIslandRestItemSide(itemId, side)
+        SettingsStore.setIslandItemOrder(context,
+            side === "left" ? column.concat(other) : other.concat(column))
     }
 
     function remove(itemId): void {
@@ -47,8 +75,12 @@ Item {
     }
 
     function add(itemId): void {
-        if (order.indexOf(itemId) < 0)
-            SettingsStore.setIslandItemOrder(context, order.concat([itemId]))
+        if (order.indexOf(itemId) >= 0)
+            return
+        SettingsStore.setIslandItemOrder(context, order.concat([itemId]))
+        if (splitSides)
+            SettingsStore.setIslandRestItemSide(itemId,
+                leftOrder.length <= rightOrder.length ? "left" : "right")
     }
 
     ColumnLayout {
@@ -65,55 +97,90 @@ Item {
             font.letterSpacing: 1.1
         }
 
+        // Hover island: the classic single ordered strip of slots.
         RowLayout {
+            visible: context !== "rest"
             Layout.fillWidth: true
             Layout.preferredHeight: 64
             spacing: Theme.space1
 
             Repeater {
                 model: root.definitions.length
-                delegate: DropArea {
-                    id: slot
+                delegate: SlotRow {
                     required property int index
-                    readonly property string currentId:
-                        index < root.order.length ? root.order[index] : ""
                     Layout.fillWidth: true
                     Layout.preferredHeight: 62
-                    keys: ["odyssey-island-item"]
-                    onDropped: drop => {
-                        if (drop.source?.itemId)
-                            root.place(drop.source.itemId, index)
-                    }
+                    side: ""
+                    slotIndex: index
+                    currentId: index < root.order.length
+                        ? root.order[index] : ""
+                }
+            }
+        }
 
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: Theme.radiusSmall
-                        color: slot.containsDrag
-                            ? Qt.alpha(Theme.primaryContainer, 0.78)
-                            : Qt.alpha(Theme.surfaceContainerLow, 0.66)
-                        border.width: 1
-                        border.color: slot.containsDrag ? Theme.primary
-                            : Qt.alpha(Theme.outlineVariant, 0.48)
-                        Text {
-                            anchors.centerIn: parent
-                            visible: slot.currentId.length === 0
-                            text: (slot.index + 1).toString()
-                            color: Theme.surfaceVariantText
-                            font.family: Config.appearance.monoFontFamily
-                            font.pixelSize: 9
+        // Resting island: two labelled groups of slots that share the same
+        // item pool, so the user can balance the pill by hand.
+        ColumnLayout {
+            visible: root.splitSides
+            Layout.fillWidth: true
+            Layout.preferredHeight: 152
+            spacing: Theme.space2
+
+            GridLayout {
+                Layout.fillWidth: true
+                columns: 2
+                columnSpacing: Theme.space2
+                Text {
+                    Layout.fillWidth: true
+                    text: "LEFT OF CLOCK"
+                    color: Theme.primary
+                    font.family: Config.appearance.monoFontFamily
+                    font.pixelSize: 9
+                    font.weight: Font.Bold
+                    font.letterSpacing: 1.1
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: "RIGHT OF CLOCK"
+                    color: Theme.primary
+                    font.family: Config.appearance.monoFontFamily
+                    font.pixelSize: 9
+                    font.weight: Font.Bold
+                    font.letterSpacing: 1.1
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 62
+                    spacing: Theme.space1
+                    Repeater {
+                        model: root.leftSlots
+                        delegate: SlotRow {
+                            required property int index
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 62
+                            side: "left"
+                            slotIndex: index
+                            currentId: index < root.leftOrder.length
+                                ? root.leftOrder[index] : ""
                         }
                     }
-
-                    DragTile {
-                        x: 0
-                        y: 0
-                        width: parent.width
-                        height: parent.height
-                        visible: slot.currentId.length > 0
-                        itemId: slot.currentId
-                        icon: root.definition(itemId).icon
-                        label: root.definition(itemId).label
-                        onClicked: root.remove(itemId)
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 62
+                    spacing: Theme.space1
+                    Repeater {
+                        model: root.rightSlots
+                        delegate: SlotRow {
+                            required property int index
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 62
+                            side: "right"
+                            slotIndex: index
+                            currentId: index < root.rightOrder.length
+                                ? root.rightOrder[index] : ""
+                        }
                     }
                 }
             }
@@ -131,7 +198,9 @@ Item {
                 font.letterSpacing: 1.1
             }
             Text {
-                text: "Drag into a slot · click to add/remove"
+                text: root.splitSides
+                    ? "Drag into a column · click to remove"
+                    : "Drag into a slot · click to add/remove"
                 color: Theme.surfaceVariantText
                 font.family: Config.appearance.fontFamily
                 font.pixelSize: 9
@@ -197,6 +266,55 @@ Item {
         }
     }
 
+    // A single dropped-into slot. `side` empty means the hover strip; when set
+    // the slot belongs to the named resting column.
+    component SlotRow: DropArea {
+        id: slot
+        required property string side
+        required property int slotIndex
+        required property string currentId
+        keys: ["odyssey-island-item"]
+        onDropped: drop => {
+            if (!drop.source?.itemId)
+                return
+            if (slot.side === "")
+                root.place(drop.source.itemId, slot.slotIndex)
+            else
+                root.placeSide(drop.source.itemId, slot.side, slot.slotIndex)
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: Theme.radiusSmall
+            color: slot.containsDrag
+                ? Qt.alpha(Theme.primaryContainer, 0.78)
+                : Qt.alpha(Theme.surfaceContainerLow, 0.66)
+            border.width: 1
+            border.color: slot.containsDrag ? Theme.primary
+                : Qt.alpha(Theme.outlineVariant, 0.48)
+            Text {
+                anchors.centerIn: parent
+                visible: slot.currentId.length === 0
+                text: (slot.slotIndex + 1).toString()
+                color: Theme.surfaceVariantText
+                font.family: Config.appearance.monoFontFamily
+                font.pixelSize: 9
+            }
+        }
+
+        DragTile {
+            x: 0
+            y: 0
+            width: parent.width
+            height: parent.height
+            visible: slot.currentId.length > 0
+            itemId: slot.currentId
+            icon: root.definition(itemId).icon
+            label: root.definition(itemId).label
+            onClicked: root.remove(itemId)
+        }
+    }
+
     component DragTile: Rectangle {
         id: tile
         required property string itemId
@@ -241,7 +359,10 @@ Item {
             }
             Text {
                 Layout.alignment: Qt.AlignHCenter
+                width: tile.width - Theme.space1
+                horizontalAlignment: Text.AlignHCenter
                 text: tile.label
+                elide: Text.ElideRight
                 color: tileDrag.drag.active ? Theme.primaryContainerText
                     : Theme.surfaceVariantText
                 font.family: Config.appearance.fontFamily

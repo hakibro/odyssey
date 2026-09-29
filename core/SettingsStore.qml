@@ -75,6 +75,31 @@ QtObject {
         return result
     }
 
+    // Resting items are split into a left and a right column. The stored
+    // `restItemSides` map records which side each item belongs to; anything
+    // missing falls back to an even split of `restItemOrder`, which is the
+    // behaviour before explicit sides existed.
+    function restItemSide(sides, order, item): string {
+        if (sides && typeof sides === "object" && typeof sides[item] === "string"
+                && sides[item] === "right")
+            return "right"
+        if (sides && typeof sides === "object" && sides[item] === "left")
+            return "left"
+        const index = Array.isArray(order) ? order.indexOf(item) : -1
+        return index >= 0 && index < Math.ceil(order.length / 2)
+            ? "left" : "right"
+    }
+
+    function normalizedRestSides(sides, order): var {
+        const allowed = validRestIslandItems
+        const result = ({})
+        for (const item of (Array.isArray(order) ? order : [])) {
+            if (typeof item === "string" && allowed.indexOf(item) >= 0)
+                result[item] = restItemSide(sides, order, item)
+        }
+        return result
+    }
+
     function setValue(section: string, key: string, nextValue): void {
         const updated = JSON.parse(JSON.stringify(values || {}))
         if (!updated[section] || typeof updated[section] !== "object")
@@ -239,6 +264,22 @@ QtObject {
             validated.push(candidate)
         }
         setValue("island", context + "ItemOrder", validated)
+        return true
+    }
+
+    function setIslandRestItemSide(item: string, side: string): bool {
+        if (validRestIslandItems.indexOf(item) < 0)
+            return false
+        if (side !== "left" && side !== "right")
+            return false
+        const order = stringListValue("island", "restItemOrder",
+            validRestIslandItems, validRestIslandItems)
+        if (order.indexOf(item) < 0)
+            return false
+        const stored = value("island", "restItemSides", ({}))
+        const sides = normalizedRestSides(stored, order)
+        sides[item] = side
+        setValue("island", "restItemSides", sides)
         return true
     }
 
@@ -607,6 +648,18 @@ QtObject {
                     && island.restItemOrder.length > 0
                     && island.restItemOrder.indexOf("Battery") < 0)
                 island.restItemOrder = island.restItemOrder.concat(["Battery"])
+        }
+        // Materialize the historical even split into explicit sides once, so
+        // the resting island keeps looking the same while giving the user a
+        // starting point they can rebalance.
+        if (migrations.restItemSides !== true) {
+            migrations.restItemSides = true
+            const island = source.island
+            if (island && typeof island === "object"
+                    && Array.isArray(island.restItemOrder)
+                    && island.restItemOrder.length > 0)
+                island.restItemSides = normalizedRestSides(
+                    island.restItemSides, island.restItemOrder)
         }
         source.migrations = migrations
         return { settings: source, changed: JSON.stringify(migrations) !== before }

@@ -119,6 +119,15 @@ QtObject {
         readonly property var restItemOrder: SettingsStore.stringListValue(
             "island", "restItemOrder", SettingsStore.validRestIslandItems,
             SettingsStore.validRestIslandItems)
+        readonly property var restItemSides: SettingsStore.normalizedRestSides(
+            SettingsStore.value("island", "restItemSides", ({})),
+            restItemOrder)
+        readonly property var restLeftItemOrder: restItemOrder.filter(
+            itemId => SettingsStore.restItemSide(restItemSides, restItemOrder,
+                itemId) === "left")
+        readonly property var restRightItemOrder: restItemOrder.filter(
+            itemId => SettingsStore.restItemSide(restItemSides, restItemOrder,
+                itemId) === "right")
         readonly property bool restShowWeather: restItemOrder.indexOf("Weather") >= 0
         readonly property bool restShowDnd: restItemOrder.indexOf("Dnd") >= 0
         readonly property bool restShowKeepAwake:
