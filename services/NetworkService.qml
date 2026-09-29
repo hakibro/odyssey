@@ -122,6 +122,12 @@ QtObject {
         return WifiSecurityType.toString(network.security)
     }
 
+    function isPasswordProtected(network): bool {
+        return !!network && network.security !== WifiSecurityType.Open
+            && network.security !== WifiSecurityType.Owe
+            && network.security !== WifiSecurityType.Unknown
+    }
+
     function supportsPassword(network): bool {
         if (!network)
             return false

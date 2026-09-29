@@ -432,8 +432,9 @@ declare -a labels=() results=() details=()
 check() { labels+=("$1"); check_detail=; shift; if "$@"; then results+=(pass); details+=(""); else results+=(fail); details+=("${check_detail:-failed}"); fi; }
 has_command() { command -v "$1" >/dev/null 2>&1; }
 odyssey_command_ok() {
-    local output expected="${XDG_BIN_HOME:-$HOME/.local/bin}/odyssey"
-    output=$("$root_dir/scripts/verify-launcher-path.sh" "$expected" 2>&1) \
+    local output expected="${XDG_BIN_HOME:-$HOME/.local/bin}/odyssey" shell=bash
+    [[ $(basename -- "${default_shell:-unknown}") != fish ]] || shell=fish
+    output=$("$root_dir/scripts/verify-launcher-path.sh" "$expected" "$shell" 2>&1) \
         || { check_detail=$output; return 1; }
 }
 valid_release() {

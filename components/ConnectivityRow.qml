@@ -12,6 +12,7 @@ Rectangle {
     property bool available: true
     property bool busy: false
     property bool informationAvailable: false
+    property bool secured: false
     property color accent: Theme.primary
 
     signal activated()
@@ -107,20 +108,24 @@ Rectangle {
         }
 
         Rectangle {
-            visible: root.informationAvailable
+            visible: root.informationAvailable || root.secured
             Layout.preferredWidth: 30
             Layout.preferredHeight: 30
             radius: 15
-            color: infoHover.hovered ? Theme.surfaceContainerHigh : "transparent"
+            color: root.informationAvailable && infoHover.hovered
+                ? Theme.surfaceContainerHigh : "transparent"
             Text {
                 anchors.centerIn: parent
-                text: "󰋼"
+                text: root.informationAvailable ? "󰋼" : "󰌾"
                 color: Theme.surfaceVariantText
                 font.family: Config.appearance.monoFontFamily
                 font.pixelSize: 13
             }
-            HoverHandler { id: infoHover }
-            TapHandler { onTapped: root.informationRequested() }
+            HoverHandler { id: infoHover; enabled: root.informationAvailable }
+            TapHandler {
+                enabled: root.informationAvailable
+                onTapped: root.informationRequested()
+            }
         }
 
         Rectangle {

@@ -22,6 +22,16 @@ launcher_path() {
     [[ $path == /* && $path != *$'\n'* ]] || return 1
     printf '%s\n' "$path"
 }
+ensure_fish_launcher_path() {
+    local fish_bin launcher directory resolved
+    fish_bin=$(command -v fish) || return 0
+    launcher=$(launcher_path) || return 1
+    directory=${launcher%/*}
+    # fish_user_paths is persistent; fish_add_path skips an existing entry.
+    "$fish_bin" -c 'fish_add_path --universal -- $argv[1]; or contains -- $argv[1] $fish_user_paths' "$directory" >/dev/null || return 1
+    resolved=$(env PATH=/usr/bin:/bin "$fish_bin" -c 'command -s odyssey' 2>/dev/null) || return 1
+    [[ $(readlink -f -- "$resolved") == $(readlink -f -- "$launcher") ]]
+}
 launcher_shell() { jq -rn --arg path "$(launcher_path)" '$path|@sh'; }
 launcher_lua() {
     local command; command=$(launcher_shell) || return 1
@@ -383,7 +393,11 @@ mutate() {
     else
       jq -e --arg mainsha "$(sha "$main")" --arg integrationsha "$(sha "$integration")" --arg unitsha "$(sha "$unit_file")" '.main.afterSha256==$mainsha and .integration.sha256==$integrationsha and .unit.sha256==$unitsha' "$receipt_file" >/dev/null && split_matches_receipt "$receipt_file" "$main" || { error remove DRIFT 'managed host files changed' refused; return 73; }; backup=$(jq -r .main.backup "$receipt_file"); absent=$(jq -r '.main.previouslyAbsent // false' "$receipt_file"); if [[ $absent == false ]]; then [[ -f $backup && $(sha "$backup") == $(jq -r .main.backupSha256 "$receipt_file") ]] || { error remove BACKUP_DRIFT 'recorded main-config backup is unavailable' refused; return 73; }; fi; split_backups_valid "$receipt_file" || { error remove BACKUP_DRIFT 'recorded split-config backup is unavailable' refused; return 73; }; systemctl --user stop odyssey.service || true; systemctl --user disable odyssey.service || { compensate "$plan_file" "$id" || true; return 1; }; if [[ $absent == true ]]; then rm -f -- "$main"; else cp -p -- "$backup" "$main"; fi; restore_split_receipt "$receipt_file" "$main"; if [[ $(jq -r '.integration.previouslyAbsent' "$receipt_file") == true ]]; then rm -f -- "$integration"; else cp -p -- "$(jq -r .integration.backup "$receipt_file")" "$integration"; fi; if [[ $(jq -r '.unit.previouslyAbsent' "$receipt_file") == true ]]; then rm -f -- "$unit_file"; else cp -p -- "$(jq -r .unit.backup "$receipt_file")" "$unit_file"; fi; systemctl --user daemon-reload || { compensate "$plan_file" "$id" || true; return 1; }; if [[ $(jq -r 'if .previousReceipt then .previousReceipt.previouslyAbsent else true end' "$receipt_file") == false ]]; then previous=$(jq -r .previousReceipt.backup "$receipt_file"); [[ -f $previous && $(sha "$previous") == $(jq -r .previousReceipt.backupSha256 "$receipt_file") ]] || { error remove BACKUP_DRIFT 'previous startup receipt backup is unavailable' refused; return 73; }; cp -p -- "$previous" "$receipt_file"; else rm -f -- "$receipt_file"; fi; rm -f -- "$pending_file"; result remove completed unmanaged "$id"; return
     fi
-    enabled && active || { error "$action" VERIFY_FAILED 'Odyssey unit did not become active'; return 75; }; rm -f -- "$pending_file"; result "$action" completed active "$id"
+    enabled && active || { error "$action" VERIFY_FAILED 'Odyssey unit did not become active'; return 75; }
+    if [[ $action != remove ]]; then
+        ensure_fish_launcher_path || { error "$action" VERIFY_FAILED 'Odyssey launcher is unavailable in a fresh Fish shell'; return 75; }
+    fi
+    rm -f -- "$pending_file"; result "$action" completed active "$id"
 }
 main() { shift 2; local cmd=${1:-} action='' id='' root='' mode='' plan_file=''; shift || true; while (($#)); do case $1 in --action) action=$2;shift 2;;--release-id) id=$2;shift 2;;--release-root) root=$2;shift 2;;--configuration-mode) mode=$2;shift 2;;--plan-file) plan_file=$2;shift 2;;--plan-id) id=$2;shift 2;;*) error "$cmd" INVALID_REQUEST 'invalid arguments' refused;return 64;;esac; done; case $cmd in status) status_json;;plan) plan "$action" "$id" "$root" "$mode";;apply|retarget|remove) mutate "$cmd" "$plan_file" "$id";;compensate) compensate "$plan_file" "$id";;*) error unknown INVALID_REQUEST 'invalid command' refused;return 64;;esac; }
 

@@ -787,6 +787,8 @@ Item {
                                 ? Theme.tertiary : Theme.primary
                             informationAvailable: (root.displayedSection === "wifi"
                                 && modelData?.connected) || root.displayedSection === "bluetooth"
+                            secured: root.displayedSection === "wifi"
+                                && NetworkService.isPasswordProtected(modelData)
                             onActivated: root.activateOption(modelData)
                             onInformationRequested: root.showInformation(modelData)
                         }

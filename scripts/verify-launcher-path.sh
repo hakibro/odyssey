@@ -2,12 +2,20 @@
 set -euo pipefail
 
 expected=${1:-}
+shell=${2:-bash}
 [[ $expected == /* ]] || {
     printf 'expected odyssey launcher path is invalid\n' >&2
     exit 64
 }
 
-resolved=$(command -v odyssey 2>/dev/null || true)
+case $shell in
+  bash) resolved=$(command -v odyssey 2>/dev/null || true) ;;
+  fish)
+    fish_bin=$(command -v fish) || { printf 'Fish is unavailable\n' >&2; exit 1; }
+    resolved=$(env PATH=/usr/bin:/bin "$fish_bin" -c 'command -s odyssey' 2>/dev/null || true)
+    ;;
+  *) printf 'unsupported shell: %s\n' "$shell" >&2; exit 64 ;;
+esac
 if [[ -z $resolved ]]; then
     printf 'odyssey is installed at %s but is not available on PATH; add %s to PATH, start a new shell, and rerun ./install.sh\n' \
         "$expected" "$(dirname -- "$expected")" >&2
