@@ -10,7 +10,8 @@ Item {
         { id: "Dnd", icon: "󰂛", label: "DND" },
         { id: "KeepAwake", icon: "󰅶", label: "Awake" },
         { id: "PowerProfile", icon: "󰓅", label: "Power" },
-        { id: "Workspaces", icon: "󰍹", label: "Spaces" }
+        { id: "Workspaces", icon: "󰍹", label: "Spaces" },
+        { id: "Battery", icon: "󰁹", label: "Battery" }
     ] : [
         { id: "Workspaces", icon: "󰍹", label: "Spaces" },
         { id: "Clock", icon: "󰥔", label: "Clock" },

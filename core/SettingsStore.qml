@@ -36,7 +36,7 @@ QtObject {
         "auto", "kitty", "foot", "alacritty", "ghostty"
     ]
     readonly property var validRestIslandItems: [
-        "Weather", "Dnd", "KeepAwake", "PowerProfile", "Workspaces"
+        "Weather", "Dnd", "KeepAwake", "PowerProfile", "Workspaces", "Battery"
     ]
     readonly property var validHoverIslandItems: [
         "Workspaces", "Clock", "Media", "Audio", "Network", "Dnd",
@@ -589,12 +589,41 @@ QtObject {
         }, null, 2))
     }
 
+    // One-time upgrade steps that surface newly added defaults without
+    // clobbering a user's later, deliberate changes. Each step is recorded in
+    // the stored `migrations` map so it never runs twice.
+    function migrateSettings(settings): var {
+        let source = settings
+        if (!source || typeof source !== "object")
+            source = ({})
+        const migrations = source.migrations && typeof source.migrations === "object"
+            ? source.migrations : ({})
+        const before = JSON.stringify(migrations)
+        if (migrations.restBattery !== true) {
+            migrations.restBattery = true
+            const island = source.island
+            if (island && typeof island === "object"
+                    && Array.isArray(island.restItemOrder)
+                    && island.restItemOrder.length > 0
+                    && island.restItemOrder.indexOf("Battery") < 0)
+                island.restItemOrder = island.restItemOrder.concat(["Battery"])
+        }
+        source.migrations = migrations
+        return { settings: source, changed: JSON.stringify(migrations) !== before }
+    }
+
     function load(raw: string): void {
         try {
             const parsed = JSON.parse(raw)
-            values = parsed?.settings && typeof parsed.settings === "object"
+            const settings = parsed?.settings && typeof parsed.settings === "object"
                 ? parsed.settings : ({})
+            const result = migrateSettings(settings)
+            values = result.settings
             errorMessage = ""
+            loaded = true
+            if (result.changed)
+                save()
+            return
         } catch (error) {
             values = ({})
             errorMessage = "Settings could not be read"

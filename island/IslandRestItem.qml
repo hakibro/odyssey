@@ -22,6 +22,7 @@ Item {
             : root.itemId === "Clock" ? clockComponent
             : root.itemId === "Workspaces" ? workspacesComponent
             : root.itemId === "KeepAwake" ? keepAwakeComponent
+            : root.itemId === "Battery" ? batteryComponent
             : root.itemId === "PowerProfile" ? powerComponent : null
     }
 
@@ -116,6 +117,47 @@ Item {
                 font.pixelSize: Math.round(11 * Config.island.restIconScale)
             }
             TapHandler { onTapped: IdleService.toggleInhibition() }
+        }
+    }
+
+    Component {
+        id: batteryComponent
+        Item {
+            readonly property int percentage: BatteryService.percentageInt
+            readonly property color levelColor: !BatteryService.available
+                ? Theme.surfaceVariantText
+                : BatteryService.charging ? Theme.primary
+                : percentage <= 15 ? Theme.error
+                : percentage <= 30 ? Theme.warning
+                : Theme.success
+            implicitWidth: Math.round(20 * Config.island.restIconScale)
+            implicitHeight: 20
+
+            // Battery glyph with the percentage drawn inside the body so the
+            // level reads directly from the icon, tinted by charge state.
+            Text {
+                anchors.centerIn: parent
+                text: BatteryService.icon
+                color: levelColor
+                font.family: Config.appearance.monoFontFamily
+                font.pixelSize: Math.round(12 * Config.island.restIconScale)
+            }
+
+            Text {
+                anchors.centerIn: parent
+                anchors.horizontalCenterOffset: Math.round(-1
+                    * Config.island.restIconScale)
+                anchors.verticalCenterOffset: Math.round(1.5
+                    * Config.island.restIconScale)
+                text: parent.percentage
+                color: Theme.surfaceText
+                font.family: Config.appearance.monoFontFamily
+                font.pixelSize: Math.max(5, Math.round(6
+                    * Config.island.restTextScale))
+                font.weight: Font.Bold
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
         }
     }
 

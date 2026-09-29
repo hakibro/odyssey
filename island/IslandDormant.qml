@@ -9,10 +9,15 @@ Item {
     signal captureRequested()
     property bool powerHovered: false
     property var monitor
-    readonly property var displayOrder: CaptureService.recording
-            && Config.island.restItemOrder.indexOf("PowerProfile") < 0
-        ? Config.island.restItemOrder.concat(["PowerProfile"])
-        : Config.island.restItemOrder
+    readonly property var displayOrder: {
+        let order = CaptureService.recording
+                && Config.island.restItemOrder.indexOf("PowerProfile") < 0
+            ? Config.island.restItemOrder.concat(["PowerProfile"])
+            : Config.island.restItemOrder
+        if (!BatteryService.available)
+            order = order.filter(itemId => itemId !== "Battery")
+        return order
+    }
     readonly property var leftDisplayOrder: displayOrder.slice(0,
         Math.ceil(displayOrder.length / 2))
     readonly property var rightDisplayOrder: displayOrder.slice(
