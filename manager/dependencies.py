@@ -122,7 +122,9 @@ class ArchDependencies:
 
     def inspect(self) -> dict[str, object]:
         platform = self.platform()
-        supported = platform.get("id") == "arch" and platform.get("packageManager") == "pacman"
+        arch_like = (platform.get("id") == "arch"
+                     or platform.get("archCompatible") == "true")
+        supported = arch_like and platform.get("packageManager") == "pacman"
         packages = [self._inspect_package(item) for item in ARCH_PACKAGES]
         missing = [item["name"] for item in packages if not item["available"]]
         errors = [item["error"] for item in packages if "error" in item]

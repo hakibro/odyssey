@@ -138,10 +138,17 @@ def read_os_release(path: Path = Path("/etc/os-release")) -> dict[str, str]:
     return result
 
 
+def _arch_compatible(release: dict[str, str]) -> bool:
+    identifier = release.get("ID", "").lower()
+    lineage = release.get("ID_LIKE", "").lower().split()
+    return identifier == "arch" or "arch" in lineage
+
+
 def discover_platform(os_release: dict[str, str] | None = None, which: Callable[[str], str | None] = shutil.which) -> dict[str, str]:
     release = read_os_release() if os_release is None else os_release
     manager = next((name for name in ("pacman", "apt-get", "dnf", "zypper", "apk") if which(name)), "unknown")
-    return {"id": release.get("ID", "unknown"), "version": release.get("VERSION_ID", "unknown"), "packageManager": manager}
+    return {"id": release.get("ID", "unknown"), "version": release.get("VERSION_ID", "unknown"),
+            "packageManager": manager, "archCompatible": str(_arch_compatible(release)).lower()}
 
 
 DEPENDENCIES = {
