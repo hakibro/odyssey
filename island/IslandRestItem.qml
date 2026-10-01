@@ -22,7 +22,7 @@ Item {
             : root.itemId === "Clock" ? clockComponent
             : root.itemId === "Workspaces" ? workspacesComponent
             : root.itemId === "KeepAwake" ? keepAwakeComponent
-            : root.itemId === "Battery" ? batteryComponent
+            : root.itemId === "Battery" ? batteryGlyphComponent
             : root.itemId === "PowerProfile" ? powerComponent : null
     }
 
@@ -120,8 +120,85 @@ Item {
         }
     }
 
+    // ------------------------------------------------------------------
+    // Battery icon — pick one by switching `batteryComponent` below between:
+    //   batteryOutlineComponent        horizontal body + nub + fill
+    //   batteryGlyphComponent          vertical MDI glyph, level-tinted
+    //   batteryGlyphHorizontalComponent horizontal FA glyph, level-tinted
+    //   batteryBarComponent            minimalist horizontal fill bar
+    // ------------------------------------------------------------------
+
+    // (A) Default: horizontal battery outline with a proportional fill and a
+    // positive terminal nub. The level reads directly from the fill.
     Component {
-        id: batteryComponent
+        id: batteryOutlineComponent
+        Item {
+            id: batteryIcon
+
+            readonly property int percentage: BatteryService.percentageInt
+            readonly property color levelColor: !BatteryService.available
+                ? Theme.surfaceVariantText
+                : BatteryService.charging ? Theme.primary
+                : percentage <= 15 ? Theme.error
+                : percentage <= 30 ? Theme.warning
+                : Theme.success
+
+            // Local size factor applied on top of the configured rest icon
+            // scale, so the battery can sit a touch smaller than the other
+            // resting items without changing the global setting.
+            readonly property real scale: Config.island.restIconScale * 0.9
+            readonly property real border: Math.max(1, Math.round(1 * scale))
+            readonly property real gap: Math.max(1, Math.round(1.5 * scale))
+            readonly property real nubWidth: Math.max(1, Math.round(1.75 * scale))
+            readonly property real nubHeight: Math.round(4.5 * scale)
+            readonly property real bodyWidth: Math.round(16 * scale)
+            readonly property real bodyHeight: Math.round(9 * scale)
+
+            implicitWidth: bodyWidth + nubWidth
+            implicitHeight: 20
+
+            Rectangle {
+                id: body
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: batteryIcon.bodyWidth
+                height: batteryIcon.bodyHeight
+                radius: Math.max(1, Math.round(2 * batteryIcon.scale))
+                color: "transparent"
+                border.width: batteryIcon.border
+                border.color: batteryIcon.levelColor
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.leftMargin: batteryIcon.border + batteryIcon.gap
+                    readonly property real innerWidth: Math.max(0,
+                        parent.width - 2 * (batteryIcon.border + batteryIcon.gap))
+                    width: Math.round(innerWidth
+                        * Math.max(0, Math.min(100, batteryIcon.percentage)) / 100)
+                    height: Math.max(0, parent.height
+                        - 2 * (batteryIcon.border + batteryIcon.gap))
+                    radius: 1
+                    color: batteryIcon.levelColor
+                }
+            }
+
+            // Positive terminal nub on the right edge of the body.
+            Rectangle {
+                anchors.left: body.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: batteryIcon.nubWidth
+                height: batteryIcon.nubHeight
+                radius: 1
+                color: batteryIcon.levelColor
+            }
+        }
+    }
+
+    // (B) Plain Nerd Font glyph, tinted by charge level. No overlaid digits.
+    // Uses the MDI battery series (U+F0079…), which is drawn vertically.
+    Component {
+        id: batteryGlyphComponent
         Item {
             readonly property int percentage: BatteryService.percentageInt
             readonly property color levelColor: !BatteryService.available
@@ -130,11 +207,10 @@ Item {
                 : percentage <= 15 ? Theme.error
                 : percentage <= 30 ? Theme.warning
                 : Theme.success
+
             implicitWidth: Math.round(20 * Config.island.restIconScale)
             implicitHeight: 20
 
-            // Battery glyph with the percentage drawn inside the body so the
-            // level reads directly from the icon, tinted by charge state.
             Text {
                 anchors.centerIn: parent
                 text: BatteryService.icon
@@ -142,21 +218,84 @@ Item {
                 font.family: Config.appearance.monoFontFamily
                 font.pixelSize: Math.round(12 * Config.island.restIconScale)
             }
+        }
+    }
+
+    // (B2) Horizontal Nerd Font glyph. Uses the Font Awesome battery series
+    // (U+F240…U+F244 / nf-fa-battery-*), which is drawn horizontally, unlike
+    // the vertical MDI series above. Level maps to the nearest FA step.
+    Component {
+        id: batteryGlyphHorizontalComponent
+        Item {
+            readonly property int percentage: BatteryService.percentageInt
+            readonly property color levelColor: !BatteryService.available
+                ? Theme.surfaceVariantText
+                : BatteryService.charging ? Theme.primary
+                : percentage <= 15 ? Theme.error
+                : percentage <= 30 ? Theme.warning
+                : Theme.success
+
+            // Horizontal Font Awesome battery glyphs, full → empty.
+            readonly property string glyph: !BatteryService.available ? "\uf244"
+                : BatteryService.charging ? "\uf0e7" // nf-fa-bolt
+                : percentage > 87 ? "\uf240" // nf-fa-battery-full
+                : percentage > 62 ? "\uf241" // nf-fa-battery-three-quarters
+                : percentage > 37 ? "\uf242" // nf-fa-battery-half
+                : percentage > 12 ? "\uf243" // nf-fa-battery-quarter
+                : "\uf244" // nf-fa-battery-empty
+
+            implicitWidth: Math.round(20 * Config.island.restIconScale)
+            implicitHeight: 20
 
             Text {
                 anchors.centerIn: parent
-                anchors.horizontalCenterOffset: Math.round(-1
-                    * Config.island.restIconScale)
-                anchors.verticalCenterOffset: Math.round(1.5
-                    * Config.island.restIconScale)
-                text: parent.percentage
-                color: Theme.surfaceText
+                text: parent.glyph
+                color: parent.levelColor
                 font.family: Config.appearance.monoFontFamily
-                font.pixelSize: Math.max(5, Math.round(6
-                    * Config.island.restTextScale))
-                font.weight: Font.Bold
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
+                font.pixelSize: Math.round(12 * Config.island.restIconScale)
+            }
+        }
+    }
+
+    // (C) Minimalist horizontal fill bar — no outline, no nub. Just a track
+    // and the level-tinted fill, which keeps the resting row very clean.
+    Component {
+        id: batteryBarComponent
+        Item {
+            id: batteryBar
+
+            readonly property int percentage: BatteryService.percentageInt
+            readonly property color levelColor: !BatteryService.available
+                ? Theme.surfaceVariantText
+                : BatteryService.charging ? Theme.primary
+                : percentage <= 15 ? Theme.error
+                : percentage <= 30 ? Theme.warning
+                : Theme.success
+
+            readonly property real scale: Config.island.restIconScale
+            readonly property real barWidth: Math.round(18 * scale)
+            readonly property real barHeight: Math.max(2, Math.round(5 * scale))
+
+            implicitWidth: barWidth
+            implicitHeight: 20
+
+            Rectangle {
+                id: track
+                anchors.centerIn: parent
+                width: batteryBar.barWidth
+                height: batteryBar.barHeight
+                radius: height / 2
+                color: Theme.outlineVariant
+            }
+
+            Rectangle {
+                anchors.left: track.left
+                anchors.verticalCenter: track.verticalCenter
+                width: Math.round(track.width
+                    * Math.max(0, Math.min(100, batteryBar.percentage)) / 100)
+                height: track.height
+                radius: height / 2
+                color: batteryBar.levelColor
             }
         }
     }
