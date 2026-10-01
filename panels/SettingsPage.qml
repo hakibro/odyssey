@@ -1247,6 +1247,44 @@ Item {
                                 }
                             }
 
+                            SettingsCard {
+                                Layout.fillWidth: true
+                                visible: ShortcutService.installed
+                                title: "Session dashboard"
+                                detail: "Open the Odyssey session menu"
+                                contentHeight: 36
+                                RowLayout {
+                                    anchors.fill: parent
+                                    spacing: Theme.space2
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: ShortcutService.sessionShortcut.label
+                                        elide: Text.ElideRight
+                                        color: Theme.surfaceText
+                                        font.family: Config.appearance.fontFamily
+                                        font.pixelSize: Theme.textSmall
+                                    }
+                                    Rectangle {
+                                        Layout.preferredWidth: 112
+                                        Layout.preferredHeight: 26
+                                        radius: Theme.radiusSmall
+                                        color: Theme.surfaceContainerHigh
+                                        border.width: 1
+                                        border.color: Qt.alpha(
+                                            Theme.outlineVariant, 0.48)
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: ShortcutService.sessionShortcut.keys
+                                            color: Theme.primary
+                                            font.family: Config.appearance
+                                                .monoFontFamily
+                                            font.pixelSize: 8
+                                            font.weight: Font.DemiBold
+                                        }
+                                    }
+                                }
+                            }
+
                             InfoStrip {
                                 Layout.fillWidth: true
                                 glyph: "󰌌"

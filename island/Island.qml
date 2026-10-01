@@ -552,6 +552,10 @@ PanelWindow {
             if (window.presentationTarget)
                 islandController.openPage("session")
         }
+        function onSessionToggleRequested(): void {
+            if (window.presentationTarget)
+                islandController.togglePage("session")
+        }
         function onSessionCloseRequested(): void {
             islandController.closePage("session")
         }

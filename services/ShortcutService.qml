@@ -39,6 +39,13 @@ QtObject {
         { id: "notes", label: "Toggle Notes", keys: "Super + Alt + N" },
         { id: "newNote", label: "New note", keys: "Super + Shift + N" }
     ]
+    // The session dashboard shortcut is part of the managed block but is not
+    // one of the toggleable SUPER shortcuts, so it is shown apart from the
+    // list above.
+    readonly property var sessionShortcut: ({
+        label: "Session dashboard",
+        keys: "Super + L"
+    })
 
     function enabled(action: string): bool {
         return Boolean(Config.shortcuts[action])

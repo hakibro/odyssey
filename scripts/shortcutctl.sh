@@ -56,6 +56,16 @@ conflict() {
     fi
     grep -Eq "^[[:space:]]*bind[[:space:]]*=[[:space:]]*${modifiers// /[[:space:]]+}[[:space:]]*,[[:space:]]*${key_name}[[:space:]]*," "$main_file"
 }
+session_conflict() {
+    awk -v b="$begin" -v e="$end" -v f="$format" '
+        $0==b{inside=1;next} $0==e{inside=0;next}
+        inside{next}
+        $0~/^[[:space:]]*--/{next}
+        f=="lua" && (index($0,"hl.bind(mod .. \" + L\"") || index($0,"hl.bind(\"SUPER + L\"")){found=1}
+        f!="lua" && $0~/^[[:space:]]*bind[a-z]*[[:space:]]*=[[:space:]]*SUPER[[:space:]]*,[[:space:]]*L[[:space:]]*,/{found=1}
+        END{exit found?0:1}
+    ' "$main_file"
+}
 render() {
     local target=$1 tmp launcher command action_literal
     shift
@@ -81,6 +91,11 @@ render() {
             printf 'bindl = , XF86AudioMute, exec, %s audio mute\n' "$command" >> "$tmp"
             printf 'bindl = , XF86AudioMicMute, exec, %s audio micmute\n' "$command" >> "$tmp"
         fi
+        # The session dashboard is bound to SUPER + L so it survives on systems
+        # where the physical power button is grabbed by systemd-logind before
+        # Hyprland sees it.
+        if [[ $format == lua ]]; then action_literal=$(jq -Rn --arg command "$command session-page toggle" '$command'); printf 'hl.bind("SUPER + L", hl.dsp.exec_cmd(%s), { description = "Toggle the Odyssey session dashboard" })\n' "$action_literal" >> "$tmp"
+        else printf 'bind = SUPER, L, exec, %s session-page toggle\n' "$command" >> "$tmp"; fi
         printf '%s\n' "$end" >> "$tmp"
     fi
     if ! cmp -s -- "$tmp" "$target_file"; then
@@ -95,7 +110,7 @@ render() {
 }
 case $command_name in
  status) managed && printf 'MANAGED=true\n' || printf 'MANAGED=false\n' ;;
- apply) shift 2; (($#==12)) || { printf 'Expected twelve shortcut toggles\n' >&2; exit 2; }; for value in "$@"; do valid "$value" || { printf 'Invalid shortcut toggle\n' >&2; exit 2; }; done; keys=(A 'CTRL + A' V comma N Y space 'ALT + L' 'SHIFT + S' 'SHIFT + R' 'ALT + N' 'SHIFT + N'); index=0; for value in "$@"; do [[ $value != true ]] || ! conflict "${keys[$index]}" || { printf 'Shortcut conflict: SUPER + %s is already in use\n' "${keys[$index]}" >&2; exit 1; }; ((index+=1)); done; render true "$@"; printf 'MANAGED=true\n' ;;
+ apply) shift 2; (($#==12)) || { printf 'Expected twelve shortcut toggles\n' >&2; exit 2; }; for value in "$@"; do valid "$value" || { printf 'Invalid shortcut toggle\n' >&2; exit 2; }; done; keys=(A 'CTRL + A' V comma N Y space 'ALT + L' 'SHIFT + S' 'SHIFT + R' 'ALT + N' 'SHIFT + N'); index=0; for value in "$@"; do [[ $value != true ]] || ! conflict "${keys[$index]}" || { printf 'Shortcut conflict: SUPER + %s is already in use\n' "${keys[$index]}" >&2; exit 1; }; ((index+=1)); done; ! session_conflict || { printf 'Shortcut conflict: SUPER + L is already in use\n' >&2; exit 1; }; render true "$@"; printf 'MANAGED=true\n' ;;
  remove) render false; printf 'MANAGED=false\n' ;;
  *) printf 'usage: %s {status|apply|remove} MAIN_CONFIG [TOGGLES...]\n' "$0" >&2; exit 2;;
 esac

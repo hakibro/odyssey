@@ -126,6 +126,7 @@ hl.bind(mod .. " + SHIFT + minus", hl.dsp.window.resize({ x = 0, y = -50 }), { r
 hl.bind(mod .. " + SHIFT + equal", hl.dsp.window.resize({ x = 0, y = 50 }), { repeating = true, description = "Expand window height" })
 
 -- Screenshots and Odyssey power control
+hl.bind(mod .. " + L", odyssey("session-page toggle"), { description = "Toggle the Odyssey session dashboard" })
 hl.bind("XF86Launch1", odyssey("power cycle"), { description = "Cycle power profile" })
 hl.bind("CTRL + XF86Launch1", odyssey("capture screenshot full copy"), { description = "Copy full-screen screenshot" })
 hl.bind("ALT + XF86Launch1", odyssey("capture screenshot active copy"), { description = "Copy active-window screenshot" })

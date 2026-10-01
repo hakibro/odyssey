@@ -9,6 +9,21 @@ config_root=${XDG_CONFIG_HOME:-"$HOME/.config"}
 state_root=${XDG_STATE_HOME:-"$HOME/.local/state"}
 
 active_release() {
+    # A development working tree can take over IPC without disturbing the
+    # installed release. ODYSSEY_ROOT is set by the dev launcher/drop-in and
+    # must point at a directory containing shell.qml.
+    if [[ -n ${ODYSSEY_ROOT:-} ]]; then
+        local dev_root
+        dev_root=$(cd -- "$ODYSSEY_ROOT" 2>/dev/null && pwd -P) \
+            && [[ -f $dev_root/shell.qml ]] \
+            || {
+                printf 'odyssey: ODYSSEY_ROOT is not an Odyssey working tree: %s\n' \
+                    "$ODYSSEY_ROOT" >&2
+                return 69
+            }
+        printf '%s\n' "$dev_root"
+        return
+    fi
     local current="$data_root/odyssey/current" resolved
     resolved=$(readlink -f -- "$current" 2>/dev/null) \
         && [[ -d $resolved && -f $resolved/shell.qml ]] \
