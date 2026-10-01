@@ -60,23 +60,43 @@ PanelWindow {
         : Config.island.dormantHeight + Config.island.heightIncrease
     readonly property int liveEditOffset: liveEditActive
         ? liveEditPreviewHeight + Theme.space3 : 0
-    implicitWidth: Math.max(Config.island.expandedWidth, Config.launcher.width,
-        Config.island.restMinimumWidth, islandController.hoverContentWidth)
-        + (Config.appearance.islandAttached ? 44 : 0)
-    implicitHeight: Math.max(Config.island.expandedHeight, Config.launcher.height,
-        Config.controlCenter.detailExpandedHeight, Config.insights.height,
-        Config.dashboard.height, Config.session.height, Config.settings.height)
-        + Config.island.heightIncrease + liveEditOffset
+    readonly property real uiScale: Theme.fontScale
+    implicitWidth: Math.ceil(Math.max(Config.island.expandedWidth,
+        Config.launcher.width, Config.island.restMinimumWidth,
+        islandController.hoverContentWidth) * uiScale)
+    implicitHeight: Math.ceil((Math.max(Config.island.expandedHeight,
+        Config.launcher.height, Config.controlCenter.detailExpandedHeight,
+        Config.insights.height, Config.dashboard.height, Config.session.height,
+        Config.settings.height)
+        + Config.island.heightIncrease) * uiScale + liveEditOffset)
     color: "transparent"
     visible: monitorEnabled && islandController.shouldShow
+
+    // Visible (scaled) bounds of whatever the island is currently painting. The
+    // surface uses Item.scale, so its item geometry is unscaled; the helpers
+    // below describe the on-screen rectangle used for centring and the input
+    // mask (a scaled item cannot be referenced directly by Region).
+    readonly property bool hiddenReveal: islandController.revealOnly
+        && !liveEditActive
+    readonly property real visualWidth: hiddenReveal
+        ? revealTarget.width * uiScale : surface.scaledWidth
+    readonly property real visualHeight: hiddenReveal
+        ? revealTarget.height : surface.scaledHeight
+    readonly property real visualX: Math.round((implicitWidth - visualWidth) / 2)
+    readonly property real visualY: hiddenReveal ? 0 : surface.y
+
     mask: Region {
-        item: islandController.revealOnly ? revealTarget : surface
+        x: window.visualX
+        y: window.visualY
+        width: Math.ceil(window.visualWidth)
+        height: Math.ceil(window.visualHeight)
     }
     exclusiveZone: monitorEnabled
             && !islandController.revealOnly
             && !(Config.island.autoHide
                 && islandController.overlayWithoutReservation)
-        ? Config.island.reservedSpace + Config.island.heightIncrease : 0
+        ? Math.ceil((Config.island.reservedSpace
+            + Config.island.heightIncrease) * uiScale) : 0
 
     // A separate namespace lets Hyprland blur Glass without changing the
     // intentionally translucent parts of Odyssey's original Solid material.
@@ -99,12 +119,21 @@ PanelWindow {
             islandController.visualState === islandController.dormant
         compactGlass: dormantPresentation ? 1 : 0
 
-        x: Math.round((parent.width - width) / 2)
+        // Single global scale: everything inside the pill (text, icons,
+        // spacing, background) scales together, so nothing can drift out of the
+        // boxes it lives in. TopLeft origin lets us place the top-left corner
+        // directly from the scaled footprint.
+        scale: Theme.fontScale
+        transformOrigin: Item.TopLeft
+        readonly property real scaledWidth: width * scale
+        readonly property real scaledHeight: height * scale
+
+        x: Math.round((parent.width - scaledWidth) / 2)
         y: liveEditActive ? liveEditOffset
             : islandController.revealOnly
                 // The hidden reveal belongs to the display edge; normal top
                 // margin is restored only after pointer reveal.
-                ? -height
+                ? -scaledHeight
                 : 0
         bodyWidth: islandController.targetWidth
         height: islandController.targetHeight
@@ -331,11 +360,12 @@ PanelWindow {
         id: revealTarget
         readonly property real restingBodyWidth: Math.max(
             Config.island.dormantWidth, Config.island.restMinimumWidth)
+        readonly property real scaledRestingWidth: restingBodyWidth * uiScale
         visible: islandController.revealOnly && !window.liveEditActive
         x: Math.round((parent.width - width) / 2)
         y: 0
         width: Config.appearance.islandAttached
-            ? attachedReveal.width : restingBodyWidth
+            ? scaledRestingWidth : restingBodyWidth
         height: Config.island.revealHeight
         color: "transparent"
         clip: Config.appearance.islandAttached
@@ -360,10 +390,12 @@ PanelWindow {
         // shoulder curves without increasing the reveal target's height.
         IslandSurface {
             id: attachedReveal
-            anchors.top: parent.top
-            anchors.horizontalCenter: parent.horizontalCenter
+            x: 0
+            y: 0
             visible: Config.island.showRevealLip && !islandController.fullscreen
                 && Config.appearance.islandAttached
+            scale: uiScale
+            transformOrigin: Item.TopLeft
             bodyWidth: revealTarget.restingBodyWidth
             height: Config.island.dormantHeight
                 + Config.island.heightIncrease
@@ -382,13 +414,17 @@ PanelWindow {
         id: liveEditPreview
         visible: window.liveEditActive
         enabled: false
-        x: Math.round((parent.width - width) / 2)
+        scale: uiScale
+        transformOrigin: Item.TopLeft
+        x: Math.round((parent.width - width * uiScale) / 2)
         y: 0
         bodyWidth: window.liveEditMode === "hover"
             ? islandController.hoverContentWidth
             : Math.max(Config.island.dormantWidth,
                 Config.island.restMinimumWidth)
-        height: window.liveEditPreviewHeight
+        height: window.liveEditMode === "hover"
+            ? Config.island.hoverHeight + Config.island.heightIncrease
+            : Config.island.dormantHeight + Config.island.heightIncrease
         attached: Config.appearance.islandAttached
         radius: Theme.radiusLarge
         outlineWidth: Config.island.borderEnabled

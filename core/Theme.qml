@@ -75,6 +75,10 @@ QtObject {
         14 * Config.appearance.cornerScale)
     readonly property int radiusLarge: Math.round(
         24 * Config.appearance.cornerScale)
+    // Global island scale. Applied once as an Item transform in Island.qml so
+    // the entire pill (text, icons, spacing, background) scales uniformly.
+    // Individual components must NOT multiply their sizes by this value.
+    readonly property real fontScale: Config.appearance.fontScale
     readonly property int textSmall: 12
     readonly property int textBody: 14
     readonly property int textTitle: 18

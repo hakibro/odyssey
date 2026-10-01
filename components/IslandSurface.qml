@@ -1,7 +1,14 @@
 import QtQuick
-import QtQuick.Shapes
 import "../core"
 
+// Island background surface.
+//
+// Previously this used QtQuick.Shapes to draw a path with shoulder curves.
+// Shapes are not rendered reliably on every Quickshell/Wayland setup (the
+// path silently disappears while sibling text/rectangles still paint), so the
+// surface is drawn with plain Rectangles instead. Floating style is a fully
+// rounded rounded-rect; attached style squares the top edge so it melts into
+// the screen edge, matching the old shoulder silhouette.
 Item {
     id: root
 
@@ -24,18 +31,8 @@ Item {
     readonly property real edgeInset: Math.max(0.5, outlineWidth / 2)
     readonly property real cornerRadius: Math.max(0, Math.min(radius,
         (height - edgeInset * 2) / 2, bodyWidth / 2))
-    readonly property real curveFactor: 0.55228475
     readonly property real topY: attached ? -edgeInset : edgeInset
     readonly property real bottomY: height - edgeInset
-    readonly property real leftSide: attached ? shoulderWidth : edgeInset
-    readonly property real rightSide: attached
-        ? width - shoulderWidth : width - edgeInset
-    readonly property real topShoulderY: attached
-        ? shoulderWidth : edgeInset + cornerRadius
-    readonly property real topStartX: attached
-        ? edgeInset : edgeInset + cornerRadius
-    readonly property real topEndX: attached
-        ? width - edgeInset : width - edgeInset - cornerRadius
     readonly property color gradientTopColor: SurfaceMaterial.glass
         ? Qt.tint(materialFillColor, Qt.alpha(
             SurfaceMaterial.compactHighlight, compactGlass * 0.16))
@@ -45,110 +42,56 @@ Item {
             SurfaceMaterial.compactDepthEdge, 0.08 + compactGlass * 0.05))
         : materialFillColor
 
-    width: bodyWidth + shoulderWidth * 2
+    // Attached keeps the full width flush to the edge; floating reserves the
+    // side margins that carry the shoulder taper.
+    width: attached ? bodyWidth : bodyWidth + shoulderWidth * 2
     clip: true
 
-    Shape {
-        id: surfaceShape
-        anchors.fill: parent
-        antialiasing: true
-        preferredRendererType: Shape.CurveRenderer
-
-        ShapePath {
-            strokeColor: root.outlineWidth > 0
-                ? root.materialOutlineColor : "transparent"
-            strokeWidth: root.outlineWidth
-            fillColor: "transparent"
-            fillGradient: LinearGradient {
-                x1: 0
-                y1: root.topY
-                x2: 0
-                y2: root.bottomY
-                GradientStop {
-                    position: 0
-                    color: root.gradientTopColor
-                }
-                GradientStop {
-                    position: 0.42
-                    color: root.materialFillColor
-                }
-                GradientStop {
-                    position: 0.86
-                    color: root.materialFillColor
-                }
-                GradientStop {
-                    position: 1
-                    color: root.gradientBottomColor
-                }
-            }
-            joinStyle: ShapePath.RoundJoin
-            capStyle: ShapePath.RoundCap
-            startX: root.topStartX
-            startY: root.topY
-
-            PathLine {
-                x: root.topEndX
-                y: root.topY
-            }
-            PathCubic {
-                x: root.rightSide
-                y: root.topShoulderY
-                control1X: root.attached
-                    ? surfaceShape.width - root.shoulderWidth * 0.35
-                    : root.topEndX + root.cornerRadius * root.curveFactor
-                control1Y: root.topY
-                control2X: root.rightSide
-                control2Y: root.attached
-                    ? root.shoulderWidth * 0.35
-                    : root.topShoulderY
-                        - root.cornerRadius * root.curveFactor
-            }
-            PathLine {
-                x: root.rightSide
-                y: root.bottomY - root.cornerRadius
-            }
-            PathCubic {
-                x: root.rightSide - root.cornerRadius
-                y: root.bottomY
-                control1X: root.rightSide
-                control1Y: root.bottomY - root.cornerRadius
-                    + root.cornerRadius * root.curveFactor
-                control2X: root.rightSide - root.cornerRadius
-                    + root.cornerRadius * root.curveFactor
-                control2Y: root.bottomY
-            }
-            PathLine {
-                x: root.leftSide + root.cornerRadius
-                y: root.bottomY
-            }
-            PathCubic {
-                x: root.leftSide
-                y: root.bottomY - root.cornerRadius
-                control1X: root.leftSide + root.cornerRadius
-                    - root.cornerRadius * root.curveFactor
-                control1Y: root.bottomY
-                control2X: root.leftSide
-                control2Y: root.bottomY - root.cornerRadius
-                    + root.cornerRadius * root.curveFactor
-            }
-            PathLine {
-                x: root.leftSide
-                y: root.topShoulderY
-            }
-            PathCubic {
-                x: root.topStartX
-                y: root.topY
-                control1X: root.leftSide
-                control1Y: root.attached
-                    ? root.shoulderWidth * 0.35
-                    : root.topShoulderY
-                        - root.cornerRadius * root.curveFactor
-                control2X: root.attached
-                    ? root.shoulderWidth * 0.35
-                    : root.topStartX - root.cornerRadius * root.curveFactor
-                control2Y: root.topY
-            }
+    // Body of the panel. Floating insets the sides so the shoulders read as a
+    // taper; attached spans the full width and only rounds the bottom corners.
+    Rectangle {
+        id: surfaceRect
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: root.attached ? 0 : root.shoulderWidth + root.edgeInset
+        anchors.rightMargin: root.attached ? 0 : root.shoulderWidth + root.edgeInset
+        y: root.topY
+        height: Math.max(0, root.bottomY - root.topY)
+        topLeftRadius: root.attached ? 0 : root.cornerRadius
+        topRightRadius: root.attached ? 0 : root.cornerRadius
+        bottomLeftRadius: root.cornerRadius
+        bottomRightRadius: root.cornerRadius
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: root.gradientTopColor }
+            GradientStop { position: 0.42; color: root.materialFillColor }
+            GradientStop { position: 0.86; color: root.materialFillColor }
+            GradientStop { position: 1.0; color: root.gradientBottomColor }
         }
+        border.width: root.outlineWidth
+        border.color: root.outlineWidth > 0 ? root.materialOutlineColor
+            : "transparent"
+    }
+
+    // Attached style squares the top corners on the body itself (see above), so
+    // no separate shoulder patches are needed. Floating gets its taper from the
+    // side margins; those margins use the body material as filler.
+    Rectangle {
+        visible: !root.attached && root.shoulderWidth > 0
+        anchors.left: parent.left
+        anchors.top: parent.top
+        width: root.shoulderWidth + root.edgeInset
+        height: Math.max(0, root.shoulderWidth + root.edgeInset)
+        color: root.materialFillColor
+        z: -1
+    }
+    Rectangle {
+        visible: !root.attached && root.shoulderWidth > 0
+        anchors.right: parent.right
+        anchors.top: parent.top
+        width: root.shoulderWidth + root.edgeInset
+        height: Math.max(0, root.shoulderWidth + root.edgeInset)
+        color: root.materialFillColor
+        z: -1
     }
 
     Behavior on fillColor {

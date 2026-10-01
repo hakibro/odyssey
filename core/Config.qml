@@ -91,6 +91,17 @@ QtObject {
                 ? candidate : "floating"
         }
         readonly property bool islandAttached: islandStyle === "attached"
+        // Global UI scale for the island. Applied as a single Item transform on
+        // the island root so text, icons, paddings and boxes all grow in
+        // lockstep (no per-widget scaling, no drift between them). Clamped to a
+        // sane range; 1.0 keeps the original design size.
+        readonly property real fontScale: {
+            const candidate = Number(SettingsStore.value("appearance",
+                "fontScale", 1.0))
+            if (!Number.isFinite(candidate) || candidate <= 0)
+                return 1.0
+            return Math.max(0.8, Math.min(1.6, candidate))
+        }
         readonly property bool wallpaperPaletteEnabled: SettingsStore.boolValue(
             "appearance", "wallpaperPaletteEnabled", true)
         readonly property bool use24HourClock: SettingsStore.boolValue(
